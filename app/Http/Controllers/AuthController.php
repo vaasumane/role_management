@@ -160,6 +160,7 @@ class AuthController extends Controller
 
         // Optional: clear custom session
         session()->forget(['user', 'otp', 'mobile_number']);
+        return redirect('/');
 
         return redirect('/')->with('success', 'Logged out successfully');
     }

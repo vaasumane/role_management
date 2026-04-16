@@ -33,11 +33,6 @@ function clearFilter() {
     $("#partSelect").val("");
     $("#assemblySelect").val("");
 }
-let page = 1;
-let loading = false;
-let lastPage = false;
-let search = "";
-
 function loadVoters() {
     if (loading || lastPage) return;
 
@@ -73,29 +68,46 @@ function loadVoters() {
         },
     });
 }
-function renderVoters(data, append = false) {
-    let html = "";
-
-    data.forEach((voter) => {
-        html += `
-        <div class="col-md-4 mb-3 ">
-            <div class="card shadow-sm p-3 card-grid">
-                <h5>${voter.applicant_full_name}</h5>
-                <p><strong>EPIC:</strong> ${voter.epic_number}</p>
-                <p><strong>Age:</strong> ${voter.age} | ${voter.gender}</p>
-                <p><strong>Part:</strong> ${voter.booth_address}</p>
-                <p><strong>Assembly:</strong> ${voter.assem_name}</p>
-            </div>
-        </div>`;
+$(document).ready(function () {
+    let table = $("#voterTable").DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: base_url + "voters",
+            type: "GET",
+            data: function (d) {
+                d.part_id = $("#partSelect").val();
+                d.ac_id = $("#assemblySelect").val();
+                d.search_value = $("#searchBox").val();
+            },
+        },
+        columns: [
+            { data: "id" },
+            { data: "applicant_full_name" },
+            { data: "age" },
+            { data: "gender" },
+            { data: "epic_number" },
+            { data: "booth_address" },
+            { data: "assem_name" },
+            {
+                data: null,
+                render: function (data) {
+                    return `
+                <button class="btn btn-sm btn-primary editBtn"
+                    data-id="${data.id}">
+                    Edit
+                </button>
+            `;
+                },
+            },
+        ],
+        pageLength: 10,
+    });
+    // Reload on filter change
+    $("#applyfilter,#clearFilter").click(function () {
+        table.ajax.reload();
     });
 
-    if (append) {
-        $("#voterGrid").append(html);
-    } else {
-        $("#voterGrid").html(html);
-    }
-}
-$(document).ready(function () {
     $("#MobileEnterForm").submit(function (e) {
         e.preventDefault();
 
@@ -240,32 +252,158 @@ $(document).ready(function () {
 
         $("#assemblySelect").html(options);
     });
+    $("#part_id").change(function () {
+        let partId = $(this).val();
+        let assemblies = partAssemblyData[partId];
 
-    $(window).scroll(function () {
-        if (
-            $(window).scrollTop() + $(window).height() >=
-            $(document).height() - 100
-        ) {
-            loadVoters();
+        let options = '<option value="">Select Assembly</option>';
+
+        if (assemblies) {
+            assemblies.forEach(function (item) {
+                options += `<option value="${item.assembly_id}">
+                ${item.assembly_id} - ${item.assembly_name}
+            </option>`;
+            });
         }
-    });
-    $("#voterGrid").scroll(function () {
-        if (
-            $(this).scrollTop() + $(this).innerHeight() >=
-            this.scrollHeight - 50
-        ) {
-            loadVoters();
-        }
-    });
-    $("#searchBox").keyup(function () {
-        search = $(this).val();
 
-        page = 1;
-        lastPage = false;
-
-        $("#voterGrid").html("");
-
-        loadVoters();
+        $("#ac_id").html(options);
     });
-    if (loading || lastPage) return;
+    $(document).on("click", ".editBtn", function () {
+        console.log($(this).data("id"));
+
+        let voter_id = $(this).data("id");
+
+        $.ajax({
+            url: base_url + "get-voter", // Laravel route
+            type: "get",
+            data: {
+                voter_id: voter_id,
+                _token: $("input[name=_token]").val(),
+            },
+            success: function (response) {
+                if (response.status) {
+                    AssemOp =
+                        "<option selected value='" +
+                        response.data.acid +
+                        "'>" +
+                        response.data.assem_name +
+                        "</option>";
+                    $("#edit_id").val(response.data.id);
+                    $("#applicant_full_name").val(
+                        response.data.applicant_full_name || "",
+                    );
+                    $("#applicant_first_name").val(
+                        response.data.applicant_first_name || "",
+                    );
+                    $("#applicant_last_name").val(
+                        response.data.applicant_last_name || "",
+                    );
+                    $("#age").val(response.data.age || "");
+                    $("#gender").val(response.data.gender || "");
+                    $("#relation").val(response.data.relation || "");
+                    $("#part_id").val(response.data.part_id || "");
+                    $("#ac_id").html(AssemOp);
+                    $("#realtion_full_name").val(
+                        response.data.realtion_full_name || "",
+                    );
+                    $("#realtion_last_name").val(
+                        response.data.realtion_last_name || "",
+                    );
+                    $("#epic_number").val(response.data.epic_number || "");
+                    $("#booth_address").val(response.data.booth_address || "");
+                    $("#mobile").val(response.data.mobile || "");
+                    $("#status").val(response.data.status || "");
+                    $("#color").val(response.data.color || "");
+                    $("#religions").val(response.data.religions || "");
+                    $("#occupations").val(response.data.occupations || "");
+                    $("#castes").val(response.data.castes || "");
+                    $("#educations").val(response.data.educations || "");
+                    $("#languages").val(response.data.languages || "");
+                    $(
+                        'input[name="visited_status"][value="' +
+                            response.data.visited_status +
+                            '"]',
+                    ).prop("checked", true);
+                    $(
+                        'input[name="status1"][value="' +
+                            response.data.status1 +
+                            '"]',
+                    ).prop("checked", true);
+                    $(
+                        'input[name="status2"][value="' +
+                            response.data.status2 +
+                            '"]',
+                    ).prop("checked", true);
+                    $(
+                        'input[name="status3"][value="' +
+                            response.data.status3 +
+                            '"]',
+                    ).prop("checked", true);
+                    $(
+                        'input[name="status4"][value="' +
+                            response.data.status4 +
+                            '"]',
+                    ).prop("checked", true);
+                    $("#editModal").modal("show");
+                }
+            },
+            error: function () {
+                $("#MobileVerfication")
+                    .attr("disabled", false)
+                    .html("Continue");
+
+                alert("Something went wrong");
+            },
+        });
+    });
+    $("#mobile_no").on("input", function () {
+        this.value = this.value.replace(/[^0-9]/g, "");
+    });
+
+    $("#UpdateVoter").submit(function (e) {
+        e.preventDefault();
+
+        let formdata = new FormData(this); // ✅ correct
+
+        $("#updateBtn").attr("disabled", true).html("Loading...");
+
+        $.ajax({
+            url: base_url + "update-voter", // ✅ correct route
+            type: "POST",
+            data: formdata,
+            processData: false, // ✅ important
+            contentType: false, // ✅ important
+
+            success: function (response) {
+                if (response.status) {
+                    alert("Updated successfully");
+                    $("#editModal").modal("hide");
+                    $("#voterTable").DataTable().ajax.reload(null, false);
+                } else {
+                    alert("Update failed");
+                }
+
+                $("#updateBtn").attr("disabled", false).html("Update");
+            },
+
+            error: function (xhr) {
+                // Clear old errors
+                $(".error-text").text("");
+                $(".form-control").removeClass("is-invalid");
+
+                if (xhr.status === 422) {
+                    let errors = xhr.responseJSON.errors;
+
+                    $.each(errors, function (key, value) {
+                        $("#" + key).addClass("is-invalid");
+                        $("#" + key + "_error").text(value[0]);
+                    });
+                } else {
+                    alert("Something went wrong");
+                }
+
+                $("#updateBtn").attr("disabled", false).html("Update");
+            },
+        });
+    });
 });

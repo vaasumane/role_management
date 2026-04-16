@@ -14,11 +14,11 @@
                 <!-- Left Menu -->
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link active" href="#">Dashboard</a>
+                        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">Dashboard</a>
                     </li>
 
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('voterlist') }}">Voters</a>
+                        <a class="nav-link {{ request()->routeIs('voterlist') ? 'active' : '' }}" href="{{ route('voterlist') }}">Voters</a>
                     </li>
 
                 </ul>
