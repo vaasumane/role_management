@@ -11,4 +11,8 @@ class UserMapping extends Model
     function parts(){
         return $this->belongsTo(Parts::class,'part_id','id');
     }
+    function assembly(){
+        return $this->belongsTo(Asssembly::class,'acid','id');
+
+    }
 }

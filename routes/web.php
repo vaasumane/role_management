@@ -19,5 +19,6 @@ Route::middleware([\App\Http\Middleware\CheckLogin::class])->group(function () {
     Route::get('/voters', [BLAController::class, 'getVoters']);
     Route::get('/get-voter', [BLAController::class, 'getVoterDetails'])->name('voterdetails');
     Route::post('/update-voter', [BLAController::class, 'UpdateVoter'])->name('voter.update');
+    Route::post('/store-family', [BLAController::class, 'StoreFamily'])->name('store.family');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });

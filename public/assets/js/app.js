@@ -69,9 +69,27 @@ function loadVoters() {
     });
 }
 $(document).ready(function () {
+    localStorage.setItem("selectedVoters", JSON.stringify([]));
+    if ($.fn.select2) {
+        $("#editModal").on("shown.bs.modal", function () {
+            $(".select2").select2({
+                dropdownParent: $(this),
+                width: "100%",
+                minimumResultsForSearch: 0,
+            });
+        });
+    } else {
+        console.log("Select2 not loaded properly");
+    }
+    $(".normalselect2").select2({
+        width: "100%",
+        minimumResultsForSearch: 0,
+    });
+
     let table = $("#voterTable").DataTable({
         processing: true,
         serverSide: true,
+        searching: false,
         ajax: {
             url: base_url + "voters",
             type: "GET",
@@ -82,20 +100,28 @@ $(document).ready(function () {
             },
         },
         columns: [
+            {
+                data: "id",
+                class: "bg-body-secondary",
+                render: function (data) {
+                    return `<input type="checkbox" class="voter-checkbox form-check-input" value="${data}">`;
+                },
+                orderable: false,
+            },
             { data: "id" },
+            { data: "epic_number" },
             { data: "applicant_full_name" },
+            { data: "relation_name" },
+            { data: "realtion_full_name" },
             { data: "age" },
             { data: "gender" },
-            { data: "epic_number" },
-            { data: "booth_address" },
-            { data: "assem_name" },
             {
                 data: null,
                 render: function (data) {
                     return `
                 <button class="btn btn-sm btn-primary editBtn"
                     data-id="${data.id}">
-                    Edit
+                    <i class="bi bi-pencil-square"></i>
                 </button>
             `;
                 },
@@ -225,7 +251,7 @@ $(document).ready(function () {
                     localStorage.removeItem("page");
 
                     // redirect to dashboard
-                    window.location.href = base_url + "voter-list";
+                    window.location.href = base_url + "dashboard";
                 } else {
                     alert(response.message);
                 }
@@ -292,26 +318,39 @@ $(document).ready(function () {
                     $("#applicant_full_name").val(
                         response.data.applicant_full_name || "",
                     );
-                    $("#applicant_first_name").val(
-                        response.data.applicant_first_name || "",
-                    );
-                    $("#applicant_last_name").val(
-                        response.data.applicant_last_name || "",
-                    );
-                    $("#age").val(response.data.age || "");
-                    $("#gender").val(response.data.gender || "");
-                    $("#relation").val(response.data.relation || "");
-                    $("#part_id").val(response.data.part_id || "");
-                    $("#ac_id").html(AssemOp);
-                    $("#realtion_full_name").val(
-                        response.data.realtion_full_name || "",
-                    );
-                    $("#realtion_last_name").val(
-                        response.data.realtion_last_name || "",
-                    );
-                    $("#epic_number").val(response.data.epic_number || "");
-                    $("#booth_address").val(response.data.booth_address || "");
+                    // $("#applicant_first_name").val(
+                    //     response.data.applicant_first_name || "",
+                    // );
+                    // $("#applicant_last_name").val(
+                    //     response.data.applicant_last_name || "",
+                    // );
+                    // $("#age").val(response.data.age || "");
+                    // $("#gender").val(response.data.gender || "");
+                    // $("#relation").val(response.data.relation || "");
+                    // $("#part_id").val(response.data.part_id || "");
+                    // $("#ac_id").html(AssemOp);
+                    // $("#realtion_full_name").val(
+                    //     response.data.realtion_full_name || "",
+                    // );
+                    // $("#realtion_last_name").val(
+                    //     response.data.realtion_last_name || "",
+                    // );
+                    // $("#epic_number").val(response.data.epic_number || "");
+                    // $("#booth_address").val(response.data.booth_address || "");
                     $("#mobile").val(response.data.mobile || "");
+                    $("#age").val(response.data.age || "");
+                    $("#dob").val(response.data.dob || "");
+                    $("#visited_date").val(response.data.visited_date || "");
+                    $("#visited_time").val(response.data.visited_time || "");
+                    $("#visited_location").val(
+                        response.data.visited_location || "",
+                    );
+                    if (response.data.visited_status == "1") {
+                        $(".VisitedDiv").removeClass("d-none");
+                    } else {
+                        $(".VisitedDiv").addClass("d-none");
+                    }
+
                     $("#status").val(response.data.status || "");
                     $("#color").val(response.data.color || "");
                     $("#religions").val(response.data.religions || "");
@@ -345,6 +384,7 @@ $(document).ready(function () {
                             '"]',
                     ).prop("checked", true);
                     $("#editModal").modal("show");
+                    console.log(typeof $.fn.select2);
                 }
             },
             error: function () {
@@ -378,9 +418,26 @@ $(document).ready(function () {
                 if (response.status) {
                     alert("Updated successfully");
                     $("#editModal").modal("hide");
+                    $("#UpdateVoter")[0].reset();
                     $("#voterTable").DataTable().ajax.reload(null, false);
                 } else {
-                    alert("Update failed");
+                    $("#updateBtn").attr("disabled", false).html("Update");
+
+                    $(".error-text").text("");
+                    $(".form-control").removeClass("is-invalid");
+
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+
+                        $.each(errors, function (key, value) {
+                            $("#" + key).addClass("is-invalid");
+                            $("#" + key + "_error").text(value[0]);
+                        });
+                    } else {
+                        alert("Something went wrong");
+                    }
+
+                    $("#updateBtn").attr("disabled", false).html("Update");
                 }
 
                 $("#updateBtn").attr("disabled", false).html("Update");
@@ -403,6 +460,101 @@ $(document).ready(function () {
                 }
 
                 $("#updateBtn").attr("disabled", false).html("Update");
+            },
+        });
+    });
+    $(document).on("change", 'input[name="visited_status"]', function () {
+        let value = $('input[name="visited_status"]:checked').val();
+
+        if (value == "1") {
+            $(".VisitedDiv").removeClass("d-none");
+        } else {
+            $(".VisitedDiv").addClass("d-none");
+        }
+    });
+
+    // Family
+    let selectedVoters =
+        JSON.parse(localStorage.getItem("selectedVoters")) || [];
+
+    // on checkbox change
+    $(document).on("change", ".voter-checkbox", function () {
+        let id = $(this).val();
+
+        if ($(this).is(":checked")) {
+            if (!selectedVoters.includes(id)) {
+                selectedVoters.push(id);
+            }
+        } else {
+            selectedVoters = selectedVoters.filter((v) => v != id);
+        }
+        if (selectedVoters.length > 0) {
+            $("#createFamilyDiv").removeClass("d-none");
+        } else {
+            $("#createFamilyDiv").addClass("d-none");
+        }
+
+        localStorage.setItem("selectedVoters", JSON.stringify(selectedVoters));
+    });
+    $("#voterTable").on("draw.dt", function () {
+        let selected = JSON.parse(localStorage.getItem("selectedVoters")) || [];
+
+        $(".voter-checkbox").each(function () {
+            if (selected.includes($(this).val())) {
+                $(this).prop("checked", true);
+            }
+        });
+    });
+    $("#CreateFamily").click(function () {
+        let voters = JSON.parse(localStorage.getItem("selectedVoters")) || [];
+
+        if (voters.length === 0) {
+            alert("Select at least one voter");
+            return;
+        }
+
+        $("#CreateFamily").attr("disabled", true).html("Loading");
+
+        $.ajax({
+            url: base_url + "store-family",
+            type: "POST",
+            data: {
+                voters: voters,
+                mobile: $("#family_mobile").val(),
+                religions: $("#family_religions").val(),
+                visited_date: $("#family_visited_date").val(),
+                visited_time: $("#family_visited_time").val(),
+                visited_location: $("#family_visited_location").val(),
+                _token: $("input[name=_token]").val(),
+            },
+            success: function (res) {
+                $("#CreateFamily")
+                    .attr("disabled", false)
+                    .html("Create Family");
+
+                if (res.status) {
+                    alert("Family Created");
+                    $("#family_mobile").val("");
+                    $("#family_religion").val("").trigger("change");
+                    $("#family_visited_date").val("");
+                    $("#family_visited_time").val("");
+                    $("#family_visited_location").val("");
+                    localStorage.removeItem("selectedVoters"); // clear
+                    table.ajax.reload();
+                } else {
+                    $("#CreateFamily")
+                        .attr("disabled", false)
+                        .html("Create Family");
+
+                    alert(response.error);
+                }
+            },
+            error: function (xhr) {
+                $("#CreateFamily")
+                    .attr("disabled", false)
+                    .html("Create Family");
+
+                alert(response.error);
             },
         });
     });
